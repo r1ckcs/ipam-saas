@@ -188,6 +188,7 @@ class IPAMApp {
 
         // Event listeners para gerenciamento de usuários
         document.getElementById('addUserBtn').addEventListener('click', () => {
+            console.log('addUserBtn - clicked');
             this.openUserModal();
         });
 
@@ -196,6 +197,7 @@ class IPAMApp {
         });
 
         document.getElementById('userForm').addEventListener('submit', (e) => {
+            console.log('userForm - submit event triggered');
             e.preventDefault();
             this.saveUser();
         });
@@ -806,6 +808,8 @@ class IPAMApp {
     }
 
     openUserModal(userId = null) {
+        console.log('openUserModal - chamado com userId:', userId);
+        
         document.getElementById('userModalTitle').textContent = userId ? 'Editar Usuário' : 'Adicionar Usuário';
         document.getElementById('editUserId').value = userId || '';
         document.getElementById('userName').value = '';
@@ -832,6 +836,7 @@ class IPAMApp {
         }
         
         document.getElementById('userModal').style.display = 'block';
+        console.log('openUserModal - modal aberto');
     }
 
     closeUserModal() {
@@ -839,6 +844,8 @@ class IPAMApp {
     }
 
     async saveUser() {
+        console.log('saveUser - iniciando...');
+        
         const userId = document.getElementById('editUserId').value;
         const nome = document.getElementById('userName').value;
         const email = document.getElementById('userEmail').value;
@@ -846,20 +853,29 @@ class IPAMApp {
         const role = document.getElementById('userRole').value;
         const is_active = document.getElementById('userActive').checked;
 
+        console.log('saveUser - dados capturados:', {
+            userId, nome, email, password: password ? '***' : '', role, is_active
+        });
+
         if (!nome || !email || (!password && !userId)) {
+            console.log('saveUser - erro: campos obrigatórios não preenchidos');
             this.showAlert('Preencha todos os campos obrigatórios', 'error');
             return;
         }
 
         try {
+            console.log('saveUser - iniciando requisição...');
             let response;
             
             if (userId) {
+                console.log('saveUser - atualizando usuário existente');
                 // Atualizar usuário existente
                 const updateData = { nome, email, role, is_active };
                 if (password) {
                     updateData.password = password;
                 }
+                
+                console.log('saveUser - dados para atualização:', updateData);
                 
                 response = await fetch(`${this.apiUrl}/auth/users/${userId}`, {
                     method: 'PUT',
@@ -870,6 +886,10 @@ class IPAMApp {
                     body: JSON.stringify(updateData)
                 });
             } else {
+                console.log('saveUser - criando novo usuário');
+                const createData = { nome, email, password, role };
+                console.log('saveUser - dados para criação:', createData);
+                
                 // Criar novo usuário
                 response = await fetch(`${this.apiUrl}/auth/register`, {
                     method: 'POST',
@@ -877,20 +897,30 @@ class IPAMApp {
                         'Content-Type': 'application/json',
                         ...this.getAuthHeaders()
                     },
-                    body: JSON.stringify({ nome, email, password, role })
+                    body: JSON.stringify(createData)
                 });
             }
 
+            console.log('saveUser - response status:', response.status);
+
             if (response.ok) {
+                console.log('saveUser - sucesso!');
                 this.showAlert(userId ? 'Usuário atualizado com sucesso' : 'Usuário criado com sucesso', 'success');
                 this.closeUserModal();
                 this.loadUsers();
             } else {
-                const error = await response.json();
-                this.showAlert(error.detail || 'Erro ao salvar usuário', 'error');
+                const errorText = await response.text();
+                console.error('saveUser - erro na resposta:', errorText);
+                try {
+                    const error = JSON.parse(errorText);
+                    this.showAlert(error.detail || 'Erro ao salvar usuário', 'error');
+                } catch (e) {
+                    this.showAlert('Erro ao salvar usuário: ' + errorText, 'error');
+                }
             }
         } catch (error) {
-            this.showAlert('Erro de conexão', 'error');
+            console.error('saveUser - erro de conexão:', error);
+            this.showAlert('Erro de conexão: ' + error.message, 'error');
         }
     }
 
