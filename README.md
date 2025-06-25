@@ -15,6 +15,7 @@ SaaS para gerenciamento de prefixos IP com suporte a IPv4 e IPv6.
 
 ## Funcionalidades
 
+### Gerenciamento de Prefixos
 - ✅ Cadastro, edição e exclusão de prefixos IP (IPv4 e IPv6)
 - ✅ Aninhamento automático de prefixos filhos
 - ✅ Indicação visual de prefixos usados e livres
@@ -23,15 +24,33 @@ SaaS para gerenciamento de prefixos IP com suporte a IPv4 e IPv6.
 - ✅ Interface hierárquica em árvore
 - ✅ Resumo de utilização em tabela
 
+### Sistema de Usuários
+- ✅ Autenticação com email e senha
+- ✅ Sistema de permissões com 3 roles
+- ✅ Gerenciamento completo de usuários (CRUD)
+- ✅ Interface de navegação com sidebar
+
 ## Modelo de Dados
 
 ```json
 {
+  "User": {
+    "id": "integer (primary key)",
+    "nome": "string",
+    "email": "string (unique)",
+    "password_hash": "string",
+    "role": "enum (VISUALIZADOR, OPERADOR, ADMIN)",
+    "is_active": "boolean",
+    "created_at": "datetime",
+    "updated_at": "datetime"
+  },
   "IPPrefix": {
     "id": "integer (primary key)",
     "prefix": "string (ex: 192.168.1.0/24)",
     "description": "string",
+    "usado": "boolean",
     "parent_id": "integer (foreign key, nullable)",
+    "user_id": "integer (foreign key)",
     "is_ipv6": "boolean",
     "created_at": "datetime",
     "updated_at": "datetime"
@@ -41,6 +60,18 @@ SaaS para gerenciamento de prefixos IP com suporte a IPv4 e IPv6.
 
 ## API Endpoints
 
+### Autenticação
+- `POST /auth/register` - Registrar usuário
+- `POST /auth/login` - Login de usuário
+
+### Gerenciamento de Usuários (Admin)
+- `GET /auth/users` - Listar usuários
+- `GET /auth/users/{id}` - Obter usuário específico
+- `PUT /auth/users/{id}` - Atualizar usuário
+- `DELETE /auth/users/{id}` - Excluir usuário
+- `PUT /auth/users/{id}/status` - Ativar/desativar usuário
+
+### Prefixos IP
 - `POST /prefixes` - Criar prefixo
 - `GET /prefixes` - Listar todos os prefixos
 - `GET /prefixes/{id}` - Obter prefixo específico
@@ -48,6 +79,7 @@ SaaS para gerenciamento de prefixos IP com suporte a IPv4 e IPv6.
 - `DELETE /prefixes/{id}` - Excluir prefixo
 - `GET /prefixes/{id}/children` - Obter filhos de um prefixo
 - `GET /summary` - Obter resumo de utilização
+- `GET /hierarchy` - Obter hierarquia completa
 
 ## Execução
 
@@ -64,9 +96,23 @@ docker-compose down
 
 ## Acesso
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Documentação API: http://localhost:8000/docs
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **Documentação API**: http://localhost:8000/docs
+
+## Credenciais Padrão
+
+O sistema cria automaticamente um usuário administrador na primeira execução:
+
+- **Email**: `admin@admin.com`
+- **Senha**: `Ipam`
+- **Role**: Administrador (acesso total)
+
+### Roles de Usuário
+
+- **🔍 VISUALIZADOR**: Apenas leitura de prefixos
+- **⚙️ OPERADOR**: Criar e editar prefixos IP  
+- **👑 ADMIN**: Acesso total + gerenciamento de usuários
 
 ## Stack Técnica
 
@@ -107,13 +153,13 @@ docker-compose down
 
 ## Limitações
 
-- Não implementa autenticação/autorização
-- Não tem sistema de billing
+- Não tem sistema de billing/cobrança
 - Sem backup automático
 - Sem monitoramento avançado
 - Interface básica sem frameworks CSS
 - Sem cache de consultas
 - Sem paginação para grandes volumes
+- Autenticação simples (sem JWT ou OAuth)
 
 ## Riscos
 

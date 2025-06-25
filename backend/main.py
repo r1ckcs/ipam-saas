@@ -20,6 +20,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    create_default_admin_if_needed()
 
 @app.get("/")
 async def root():
@@ -938,3 +939,32 @@ async def divide_prefix(prefix_id: int, request: DivideRequest, current_user: Us
         raise HTTPException(status_code=400, detail=f"Invalid IP prefix: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error dividing prefix: {str(e)}")
+
+def create_default_admin_if_needed():
+    """Cria usuário admin padrão se não existir nenhum admin"""
+    try:
+        db = next(get_db())
+        
+        # Verificar se já existe algum admin
+        existing_admin = db.query(User).filter(User.role == UserRole.ADMIN).first()
+        
+        if not existing_admin:
+            # Criar usuário admin padrão
+            admin_user = User(
+                nome="Administrador",
+                email="admin@admin.com",
+                role=UserRole.ADMIN,
+                is_active=True
+            )
+            admin_user.set_password("Ipam")
+            
+            db.add(admin_user)
+            db.commit()
+            
+            print("✅ Usuário admin padrão criado:")
+            print("   Email: admin@admin.com")
+            print("   Senha: Ipam")
+        
+        db.close()
+    except Exception as e:
+        print(f"❌ Erro ao criar admin padrão: {str(e)}")
