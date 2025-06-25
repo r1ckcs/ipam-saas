@@ -44,10 +44,4 @@ Como o frontend deve exibir essas informações (wireframe textual ou descriçã
 
 Não forneça texto motivacional. Seja direto, técnico e crítico. Liste riscos ou limitações da solução proposta.
 
-
-
-
-
-
-
-
+altere a tag de versão sempre que fizer alguma alteração

@@ -12,24 +12,43 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h1>IPAM - Gerenciamento de Prefixos IP</h1>
-                <div style="display: flex; align-items: center; gap: 16px;">
-                    <div style="display: flex; flex-direction: column; align-items: flex-end;">
-                        <span id="userEmail" style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 500;"></span>
-                        <span id="userRole" style="color: rgba(255,255,255,0.7); font-size: 12px; text-transform: uppercase;"></span>
-                    </div>
-                    <button id="logoutBtn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">
-                        <span class="material-icons" style="font-size: 16px; margin-right: 4px;">logout</span>
-                        Sair
-                    </button>
-                </div>
+        <!-- Menu Lateral -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>IPAM</h2>
             </div>
-        </header>
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-page="prefixos">
+                    <span class="material-icons">router</span>
+                    <span>Prefixos</span>
+                </li>
+                <li class="menu-item" data-page="usuarios">
+                    <span class="material-icons">people</span>
+                    <span>Usuários</span>
+                </li>
+            </ul>
+        </nav>
 
-        <main>
-            <section class="controls">
+        <div class="main-content">
+            <header>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1 id="pageTitle">Gerenciamento de Prefixos IP</h1>
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                            <span id="userEmail" style="color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 500;"></span>
+                            <span id="userRole" style="color: rgba(255,255,255,0.7); font-size: 12px; text-transform: uppercase;"></span>
+                        </div>
+                        <button id="logoutBtn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                            <span class="material-icons" style="font-size: 16px; margin-right: 4px;">logout</span>
+                            Sair
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Página de Prefixos -->
+            <main id="prefixos-page" class="page active">
+                <section class="controls">
                 <div class="form-group">
                     <h2>Adicionar Novo Prefixo</h2>
                     <form id="prefixForm">
@@ -80,7 +99,22 @@
                     <div id="usersTable" class="users-table"></div>
                 </div>
             </section>
-        </main>
+            </main>
+
+            <!-- Página de Usuários -->
+            <main id="usuarios-page" class="page">
+                <section class="users-management">
+                    <div class="users-header">
+                        <h2>Gerenciamento de Usuários</h2>
+                        <button id="addUserBtn" class="primary-btn">
+                            <span class="material-icons">person_add</span>
+                            Adicionar Usuário
+                        </button>
+                    </div>
+                    <div id="usersTable" class="users-table"></div>
+                </section>
+            </main>
+        </div>
     </div>
 
     <div id="modal" class="modal">

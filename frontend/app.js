@@ -10,6 +10,7 @@ class IPAMApp {
     init() {
         this.checkAuth();
         this.setupEventListeners();
+        this.setupNavigation();
         this.loadPrefixes();
     }
 
@@ -139,6 +140,44 @@ class IPAMApp {
         document.getElementById('deleteUserBtn').addEventListener('click', () => {
             this.deleteUser();
         });
+    }
+
+    setupNavigation() {
+        // Navegação do menu lateral
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const page = e.currentTarget.dataset.page;
+                this.navigateToPage(page);
+            });
+        });
+    }
+
+    navigateToPage(page) {
+        // Atualizar menu ativo
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`[data-page="${page}"]`).classList.add('active');
+
+        // Mostrar página correspondente
+        document.querySelectorAll('.page').forEach(pageEl => {
+            pageEl.classList.remove('active');
+        });
+        document.getElementById(`${page}-page`).classList.add('active');
+
+        // Atualizar título da página
+        const titles = {
+            'prefixos': 'Gerenciamento de Prefixos IP',
+            'usuarios': 'Gerenciamento de Usuários'
+        };
+        document.getElementById('pageTitle').textContent = titles[page] || 'IPAM';
+
+        // Carregar dados específicos da página
+        if (page === 'usuarios') {
+            this.loadUsers();
+        } else if (page === 'prefixos') {
+            this.loadPrefixes();
+        }
     }
 
     logout() {
