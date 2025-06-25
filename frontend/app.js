@@ -237,9 +237,14 @@ class IPAMApp {
 
         // Carregar dados específicos da página
         if (page === 'usuarios') {
+            console.log('navigateToPage - tentando carregar página de usuários');
+            console.log('navigateToPage - canManageUsers:', this.canManageUsers());
+            
             if (this.canManageUsers()) {
+                console.log('navigateToPage - usuário tem permissão, carregando usuários...');
                 this.loadUsers();
             } else {
+                console.log('navigateToPage - usuário sem permissão');
                 this.showAlert('Sem permissão para acessar gerenciamento de usuários', 'error');
                 this.navigateToPage('prefixos'); // Redirecionar para prefixos
                 return;
@@ -256,14 +261,23 @@ class IPAMApp {
 
     getAuthHeaders() {
         const user = localStorage.getItem('user');
-        if (!user) return {};
+        console.log('getAuthHeaders - user from localStorage:', user);
+        
+        if (!user) {
+            console.warn('getAuthHeaders - no user in localStorage');
+            return {};
+        }
         
         try {
             const userData = JSON.parse(user);
-            return {
+            console.log('getAuthHeaders - userData:', userData);
+            const headers = {
                 'X-User-Email': userData.email
             };
+            console.log('getAuthHeaders - returning headers:', headers);
+            return headers;
         } catch (e) {
+            console.error('getAuthHeaders - error parsing user data:', e);
             return {};
         }
     }
@@ -686,29 +700,53 @@ class IPAMApp {
 
     // Métodos para gerenciamento de usuários
     async loadUsers() {
+        console.log('loadUsers - canManageUsers:', this.canManageUsers());
+        console.log('loadUsers - userRole:', this.userRole);
+        
         if (!this.canManageUsers()) {
             this.showAlert('Sem permissão para gerenciar usuários', 'error');
             return;
         }
         
         try {
+            console.log('loadUsers - fazendo fetch para:', `${this.apiUrl}/auth/users`);
+            console.log('loadUsers - headers:', this.getAuthHeaders());
+            
             const response = await fetch(`${this.apiUrl}/auth/users`, {
                 headers: this.getAuthHeaders()
             });
             
+            console.log('loadUsers - response status:', response.status);
+            
             if (response.ok) {
                 this.users = await response.json();
+                console.log('loadUsers - usuarios carregados:', this.users);
                 this.renderUsersTable();
             } else {
+                const errorText = await response.text();
+                console.error('loadUsers - erro na resposta:', errorText);
                 this.showAlert('Erro ao carregar usuários', 'error');
             }
         } catch (error) {
+            console.error('loadUsers - erro de conexão:', error);
             this.showAlert('Erro de conexão', 'error');
         }
     }
 
     renderUsersTable() {
         const container = document.getElementById('usersTable');
+        console.log('renderUsersTable - container:', container);
+        console.log('renderUsersTable - users:', this.users);
+        
+        if (!container) {
+            console.error('Container usersTable não encontrado!');
+            return;
+        }
+        
+        if (!this.users || this.users.length === 0) {
+            container.innerHTML = '<p>Nenhum usuário encontrado.</p>';
+            return;
+        }
         
         let html = `
             <table>
@@ -726,10 +764,14 @@ class IPAMApp {
         `;
 
         this.users.forEach(user => {
+            console.log('renderUsersTable - user:', user);
             const roleDisplay = {
                 'admin': 'Administrador',
                 'operador': 'Operador', 
-                'visualizador': 'Visualizador'
+                'visualizador': 'Visualizador',
+                'ADMIN': 'Administrador',
+                'OPERADOR': 'Operador', 
+                'VISUALIZADOR': 'Visualizador'
             }[user.role] || user.role;
             
             const statusDisplay = user.is_active ? 'Ativo' : 'Inativo';

@@ -91,12 +91,12 @@
                 <div id="users" class="tab-content">
                     <div class="users-header">
                         <h3>Gerenciamento de Usuários</h3>
-                        <button id="addUserBtn" class="primary-btn">
+                        <button id="addUserBtnOld" class="primary-btn" style="display: none;">
                             <span class="material-icons">person_add</span>
                             Adicionar Usuário
                         </button>
                     </div>
-                    <div id="usersTable" class="users-table"></div>
+                    <div id="usersTableOld" class="users-table" style="display: none;"></div>
                 </div>
             </section>
             </main>
@@ -111,7 +111,9 @@
                             Adicionar Usuário
                         </button>
                     </div>
-                    <div id="usersTable" class="users-table"></div>
+                    <div id="usersTable" class="users-table">
+                        <p>Carregando usuários...</p>
+                    </div>
                 </section>
             </main>
         </div>
