@@ -5,7 +5,7 @@ from typing import List, Optional
 import ipaddress
 from database import get_db, init_db
 from models import IPPrefix, User, UserRole
-from schemas import IPPrefixCreate, IPPrefixResponse, IPPrefixUpdate, SummaryResponse, SubnetResponse, DivideRequest, DivideResponse, UserCreate, UserLogin, UserResponse, AuthResponse, UserRoleUpdate
+from schemas import IPPrefixCreate, IPPrefixResponse, IPPrefixUpdate, SummaryResponse, SubnetResponse, DivideRequest, DivideResponse, UserCreate, UserLogin, UserResponse, AuthResponse, UserRoleUpdate, UserUpdate
 
 app = FastAPI(title="IPAM - IP Address Management", version="1.0.0")
 
@@ -34,7 +34,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Criar novo usuário
-    user = User(email=user_data.email, role=user_data.role)
+    user = User(nome=user_data.nome, email=user_data.email, role=user_data.role)
     user.set_password(user_data.password)
     
     db.add(user)
@@ -105,6 +105,61 @@ async def get_users(current_user: User = Depends(require_admin), db: Session = D
     users = db.query(User).all()
     return users
 
+@app.get("/auth/users/{user_id}", response_model=UserResponse)
+async def get_user(user_id: int, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Obter um usuário específico (apenas ADMIN)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@app.put("/auth/users/{user_id}", response_model=UserResponse)
+async def update_user(user_id: int, user_data: UserUpdate, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Atualizar usuário (apenas ADMIN)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Verificar se email já existe (se estiver sendo alterado)
+    if user_data.email and user_data.email != user.email:
+        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already exists")
+        user.email = user_data.email
+    
+    if user_data.nome:
+        user.nome = user_data.nome
+    
+    if user_data.password:
+        user.set_password(user_data.password)
+    
+    if user_data.role:
+        user.role = user_data.role
+    
+    if user_data.is_active is not None:
+        user.is_active = user_data.is_active
+    
+    db.commit()
+    db.refresh(user)
+    
+    return user
+
+@app.delete("/auth/users/{user_id}")
+async def delete_user(user_id: int, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Deletar usuário (apenas ADMIN)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Não permitir que admin delete a si mesmo
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    db.delete(user)
+    db.commit()
+    
+    return {"message": "User deleted successfully"}
+
 @app.put("/auth/users/{user_id}/role", response_model=UserResponse)
 async def update_user_role(user_id: int, role_data: UserRoleUpdate, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Atualizar role de um usuário (apenas ADMIN)"""
@@ -117,6 +172,23 @@ async def update_user_role(user_id: int, role_data: UserRoleUpdate, current_user
     db.refresh(user)
     
     return user
+
+@app.put("/auth/users/{user_id}/status")
+async def toggle_user_status(user_id: int, current_user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Ativar/desativar usuário (apenas ADMIN)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Não permitir que admin desative a si mesmo
+    if user.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+    
+    user.is_active = not user.is_active
+    db.commit()
+    db.refresh(user)
+    
+    return {"message": f"User {'activated' if user.is_active else 'deactivated'} successfully", "is_active": user.is_active}
 
 @app.post("/prefixes", response_model=IPPrefixResponse)
 async def create_prefix(prefix_data: IPPrefixCreate, current_user: User = Depends(require_operador_or_admin), db: Session = Depends(get_db)):

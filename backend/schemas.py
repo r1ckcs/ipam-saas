@@ -10,6 +10,7 @@ class UserRole(str, Enum):
     ADMIN = "ADMIN"
 
 class UserBase(BaseModel):
+    nome: str
     email: str
 
 class UserCreate(UserBase):
@@ -20,10 +21,18 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class UserUpdate(BaseModel):
+    nome: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+
 class UserResponse(UserBase):
     id: int
     role: str  # Aceitar como string para evitar problemas de enum
     created_at: datetime
+    updated_at: datetime
     is_active: bool
     
     class Config:

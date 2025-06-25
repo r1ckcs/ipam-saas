@@ -37,27 +37,90 @@ class IPAMApp {
 
     setupPermissions() {
         const prefixForm = document.getElementById('prefixForm');
-        const usersTab = document.getElementById('usersTab');
+        const menuUsuarios = document.querySelector('[data-page="usuarios"]');
+        const addUserBtn = document.getElementById('addUserBtn');
         
         // Visualizador: apenas leitura
         if (this.userRole === 'VISUALIZADOR') {
             if (prefixForm) {
                 prefixForm.style.display = 'none';
             }
+            // Ocultar menu de usuários
+            if (menuUsuarios) {
+                menuUsuarios.style.display = 'none';
+            }
         }
-        // Operador e Admin: podem criar/editar
-        else if (this.userRole === 'OPERADOR' || this.userRole === 'ADMIN') {
+        // Operador: pode criar/editar prefixos, mas não gerenciar usuários
+        else if (this.userRole === 'OPERADOR') {
             if (prefixForm) {
                 prefixForm.style.display = 'grid';
             }
-        }
-        
-        // Apenas Admin: pode gerenciar usuários
-        if (this.userRole === 'ADMIN') {
-            if (usersTab) {
-                usersTab.style.display = 'block';
+            // Ocultar menu de usuários
+            if (menuUsuarios) {
+                menuUsuarios.style.display = 'none';
             }
         }
+        // Admin: acesso total
+        else if (this.userRole === 'ADMIN') {
+            if (prefixForm) {
+                prefixForm.style.display = 'grid';
+            }
+            if (menuUsuarios) {
+                menuUsuarios.style.display = 'flex';
+            }
+            if (addUserBtn) {
+                addUserBtn.style.display = 'flex';
+            }
+        }
+        
+        // Atualizar interface baseada nas permissões
+        this.updateUIPermissions();
+    }
+
+    updateUIPermissions() {
+        // Desabilitar botões de ação para usuários sem permissão
+        const actionButtons = document.querySelectorAll('.action-btn, .delete-btn');
+        const editButtons = document.querySelectorAll('[onclick*="editPrefix"], [onclick*="deletePrefix"]');
+        
+        if (this.userRole === 'VISUALIZADOR') {
+            // Desabilitar todos os botões de ação
+            actionButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.title = 'Sem permissão para esta ação';
+            });
+            
+            editButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+                btn.title = 'Sem permissão para editar';
+            });
+        }
+    }
+
+    canCreatePrefixes() {
+        return this.userRole === 'OPERADOR' || this.userRole === 'ADMIN';
+    }
+
+    canManageUsers() {
+        return this.userRole === 'ADMIN';
+    }
+
+    canEditPrefixes() {
+        return this.userRole === 'OPERADOR' || this.userRole === 'ADMIN';
+    }
+
+    hasPermission(requiredRole) {
+        const roleHierarchy = {
+            'VISUALIZADOR': 1,
+            'OPERADOR': 2,
+            'ADMIN': 3
+        };
+        
+        const userLevel = roleHierarchy[this.userRole] || 0;
+        const requiredLevel = roleHierarchy[requiredRole] || 0;
+        
+        return userLevel >= requiredLevel;
     }
 
     setupEventListeners() {
@@ -174,7 +237,13 @@ class IPAMApp {
 
         // Carregar dados específicos da página
         if (page === 'usuarios') {
-            this.loadUsers();
+            if (this.canManageUsers()) {
+                this.loadUsers();
+            } else {
+                this.showAlert('Sem permissão para acessar gerenciamento de usuários', 'error');
+                this.navigateToPage('prefixos'); // Redirecionar para prefixos
+                return;
+            }
         } else if (page === 'prefixos') {
             this.loadPrefixes();
         }
@@ -200,6 +269,11 @@ class IPAMApp {
     }
 
     async createPrefix() {
+        if (!this.canCreatePrefixes()) {
+            this.showAlert('Sem permissão para criar prefixos', 'error');
+            return;
+        }
+
         const prefix = document.getElementById('prefixInput').value.trim();
         const description = document.getElementById('descriptionInput').value.trim();
 
@@ -612,7 +686,10 @@ class IPAMApp {
 
     // Métodos para gerenciamento de usuários
     async loadUsers() {
-        if (this.userRole !== 'ADMIN') return;
+        if (!this.canManageUsers()) {
+            this.showAlert('Sem permissão para gerenciar usuários', 'error');
+            return;
+        }
         
         try {
             const response = await fetch(`${this.apiUrl}/auth/users`, {
@@ -637,6 +714,7 @@ class IPAMApp {
             <table>
                 <thead>
                     <tr>
+                        <th>Nome</th>
                         <th>Email</th>
                         <th>Papel</th>
                         <th>Status</th>
@@ -659,13 +737,22 @@ class IPAMApp {
             
             html += `
                 <tr>
-                    <td><strong>${user.email}</strong></td>
+                    <td><strong>${user.nome || 'N/A'}</strong></td>
+                    <td>${user.email}</td>
                     <td>${roleDisplay}</td>
-                    <td><span class="${statusClass}">${statusDisplay}</span></td>
+                    <td>
+                        <span class="${statusClass}">${statusDisplay}</span>
+                        <button onclick="app.toggleUserStatus(${user.id})" class="action-btn" title="${user.is_active ? 'Desativar' : 'Ativar'} usuário">
+                            <span class="material-icons">${user.is_active ? 'toggle_on' : 'toggle_off'}</span>
+                        </button>
+                    </td>
                     <td>${new Date(user.created_at).toLocaleDateString('pt-BR')}</td>
                     <td>
-                        <button onclick="app.editUser(${user.id})" class="action-btn">
+                        <button onclick="app.editUser(${user.id})" class="action-btn" title="Editar usuário">
                             <span class="material-icons">edit</span>
+                        </button>
+                        <button onclick="app.deleteUserConfirm(${user.id})" class="action-btn delete-btn" title="Excluir usuário">
+                            <span class="material-icons">delete</span>
                         </button>
                     </td>
                 </tr>
@@ -679,19 +766,23 @@ class IPAMApp {
     openUserModal(userId = null) {
         document.getElementById('userModalTitle').textContent = userId ? 'Editar Usuário' : 'Adicionar Usuário';
         document.getElementById('editUserId').value = userId || '';
+        document.getElementById('userName').value = '';
         document.getElementById('userEmail').value = '';
         document.getElementById('userPassword').value = '';
         document.getElementById('userRole').value = 'VISUALIZADOR';
+        document.getElementById('userActive').checked = true;
         document.getElementById('deleteUserBtn').style.display = userId ? 'block' : 'none';
         
         if (userId) {
             // Carregar dados do usuário
             const user = this.users.find(u => u.id === userId);
             if (user) {
+                document.getElementById('userName').value = user.nome || '';
                 document.getElementById('userEmail').value = user.email;
                 document.getElementById('userPassword').placeholder = 'Deixe em branco para manter a senha atual';
                 document.getElementById('userPassword').removeAttribute('required');
                 document.getElementById('userRole').value = user.role.toUpperCase();
+                document.getElementById('userActive').checked = user.is_active;
             }
         } else {
             document.getElementById('userPassword').setAttribute('required', '');
@@ -707,11 +798,13 @@ class IPAMApp {
 
     async saveUser() {
         const userId = document.getElementById('editUserId').value;
+        const nome = document.getElementById('userName').value;
         const email = document.getElementById('userEmail').value;
         const password = document.getElementById('userPassword').value;
         const role = document.getElementById('userRole').value;
+        const is_active = document.getElementById('userActive').checked;
 
-        if (!email || (!password && !userId)) {
+        if (!nome || !email || (!password && !userId)) {
             this.showAlert('Preencha todos os campos obrigatórios', 'error');
             return;
         }
@@ -720,14 +813,19 @@ class IPAMApp {
             let response;
             
             if (userId) {
-                // Atualizar usuário existente (apenas role por enquanto)
-                response = await fetch(`${this.apiUrl}/auth/users/${userId}/role`, {
+                // Atualizar usuário existente
+                const updateData = { nome, email, role, is_active };
+                if (password) {
+                    updateData.password = password;
+                }
+                
+                response = await fetch(`${this.apiUrl}/auth/users/${userId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
                         ...this.getAuthHeaders()
                     },
-                    body: JSON.stringify({ role: role })
+                    body: JSON.stringify(updateData)
                 });
             } else {
                 // Criar novo usuário
@@ -737,7 +835,7 @@ class IPAMApp {
                         'Content-Type': 'application/json',
                         ...this.getAuthHeaders()
                     },
-                    body: JSON.stringify({ email, password, role })
+                    body: JSON.stringify({ nome, email, password, role })
                 });
             }
 
@@ -780,6 +878,54 @@ class IPAMApp {
             } else {
                 const error = await response.json();
                 this.showAlert(error.detail || 'Erro ao excluir usuário', 'error');
+            }
+        } catch (error) {
+            this.showAlert('Erro de conexão', 'error');
+        }
+    }
+
+    deleteUserConfirm(userId) {
+        const user = this.users.find(u => u.id === userId);
+        if (!user) return;
+
+        if (confirm(`Tem certeza que deseja excluir o usuário "${user.nome || user.email}"?`)) {
+            this.deleteUserDirect(userId);
+        }
+    }
+
+    async deleteUserDirect(userId) {
+        try {
+            const response = await fetch(`${this.apiUrl}/auth/users/${userId}`, {
+                method: 'DELETE',
+                headers: this.getAuthHeaders()
+            });
+
+            if (response.ok) {
+                this.showAlert('Usuário excluído com sucesso', 'success');
+                this.loadUsers();
+            } else {
+                const error = await response.json();
+                this.showAlert(error.detail || 'Erro ao excluir usuário', 'error');
+            }
+        } catch (error) {
+            this.showAlert('Erro de conexão', 'error');
+        }
+    }
+
+    async toggleUserStatus(userId) {
+        try {
+            const response = await fetch(`${this.apiUrl}/auth/users/${userId}/status`, {
+                method: 'PUT',
+                headers: this.getAuthHeaders()
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                this.showAlert(result.message, 'success');
+                this.loadUsers();
+            } else {
+                const error = await response.json();
+                this.showAlert(error.detail || 'Erro ao alterar status do usuário', 'error');
             }
         } catch (error) {
             this.showAlert('Erro de conexão', 'error');

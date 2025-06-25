@@ -147,6 +147,10 @@
             <form id="userForm">
                 <input type="hidden" id="editUserId">
                 <div class="form-group">
+                    <label for="userName">Nome</label>
+                    <input type="text" id="userName" required>
+                </div>
+                <div class="form-group">
                     <label for="userEmail">Email</label>
                     <input type="email" id="userEmail" required>
                 </div>
@@ -161,6 +165,12 @@
                         <option value="OPERADOR">Operador (criar/editar prefixos)</option>
                         <option value="ADMIN">Administrador (acesso total)</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+                        <input type="checkbox" id="userActive" checked style="margin: 0;">
+                        <span>Usuário ativo</span>
+                    </label>
                 </div>
                 <div class="modal-actions">
                     <button type="submit"><span class="material-icons">save</span>Salvar</button>
